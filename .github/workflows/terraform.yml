@@ -1,14 +1,13 @@
-# GitHub Copilot
-name: Terraform (staging / prod)
+name: Terraform (staging - prod)
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
     paths:
       - 'eu-west-1/staging/**'
       - 'eu-west-1/prod/**'
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
     paths:
       - 'eu-west-1/staging/**'
       - 'eu-west-1/prod/**'
@@ -26,12 +25,6 @@ jobs:
     strategy:
       matrix:
         directory: [staging, prod]
-
-    # Run automatically on push only for staging; prod requires manual dispatch (or protected environment approval).
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && github.job.matrix.directory == 'staging') ||
-      (github.event_name == 'pull_request')
 
     environment: ${{ matrix.directory }}
 
