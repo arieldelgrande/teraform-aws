@@ -5,7 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'eu-west-1/staging/**'
-      - 'eu-west-1/production/**'
+      # - 'eu-west-1/production/**
 
 jobs:
   terraform:
