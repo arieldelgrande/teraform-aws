@@ -6,3 +6,4 @@ resource "aws_ecr_repository" "publish_ecr" {
     scan_on_push = true
   }
 }
+# --- IGNORE ---
