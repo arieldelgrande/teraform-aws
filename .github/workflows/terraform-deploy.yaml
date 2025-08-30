@@ -27,11 +27,6 @@ jobs:
         directory: [staging, production]
 
 
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && matrix.directory == 'staging') ||
-      github.event_name == 'pull_request'
-
     environment: ${{ matrix.directory }}
 
     steps:
