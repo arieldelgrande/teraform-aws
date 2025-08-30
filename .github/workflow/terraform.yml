@@ -1,0 +1,85 @@
+# GitHub Copilot
+name: Terraform (staging / prod)
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'eu-west-1/staging/**'
+      - 'eu-west-1/prod/**'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'eu-west-1/staging/**'
+      - 'eu-west-1/prod/**'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Run terraform apply (true/false)'
+        required: false
+        default: 'false'
+
+jobs:
+  terraform:
+    name: Terraform - ${{ matrix.directory }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        directory: [staging, prod]
+
+    # Run automatically on push only for staging; prod requires manual dispatch (or protected environment approval)
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && matrix.directory == 'staging') ||
+      (github.event_name == 'pull_request')
+
+    environment: ${{ matrix.directory }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.6.0'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Terraform fmt
+        run: terraform fmt -check
+        working-directory: ./eu-west-1/${{ matrix.directory }}
+
+      - name: Terraform init
+        run: terraform init -input=false
+        working-directory: ./eu-west-1/${{ matrix.directory }}
+
+      - name: Terraform validate
+        run: terraform validate
+        working-directory: ./eu-west-1/${{ matrix.directory }}
+
+      - name: Terraform plan
+        id: plan
+        run: |
+          terraform plan -input=false -out=tfplan
+          terraform show -no-color tfplan > plan.txt
+        working-directory: ./eu-west-1/${{ matrix.directory }}
+
+      - name: Upload plan artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ matrix.directory }}
+          path: ./eu-west-1/${{ matrix.directory }}/plan.txt
+
+      - name: Terraform apply
+        if: >
+          (github.event_name == 'push' && matrix.directory == 'staging') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.apply == 'true')
+        run: terraform apply -input=false -auto-approve tfplan
+        working-directory: ./eu-west-1/${{ matrix.directory }}
