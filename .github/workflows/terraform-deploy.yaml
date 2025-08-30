@@ -1,16 +1,16 @@
-name: Terraform (staging - prod)
+name: Terraform (staging - production)
 
 on:
   push:
     branches: [ main ]
     paths:
       - 'eu-west-1/staging/**'
-      - 'eu-west-1/prod/**'
+      - 'eu-west-1/production/**'
   pull_request:
     branches: [ main ]
     paths:
       - 'eu-west-1/staging/**'
-      - 'eu-west-1/prod/**'
+      - 'eu-west-1/production/**'
   workflow_dispatch:
     inputs:
       apply:
@@ -24,7 +24,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        directory: [staging, prod]
+        directory: [staging, production]
+
+
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && matrix.directory == 'staging') ||
+      github.event_name == 'pull_request'
 
     environment: ${{ matrix.directory }}
 
@@ -36,12 +42,22 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: '1.6.0'
+          terraform_wrapper: false  # Improves output parsing
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (staging)
+        if: matrix.directory == 'staging'
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Configure AWS credentials (production)
+        if: matrix.directory == 'production'
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_production_ACCESS_KEY || secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_production_SECRET_ACCESS_KEY || secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Terraform fmt
@@ -69,6 +85,29 @@ jobs:
         with:
           name: terraform-plan-${{ matrix.directory }}
           path: ./eu-west-1/${{ matrix.directory }}/plan.txt
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('./eu-west-1/${{ matrix.directory }}/plan.txt', 'utf8');
+            const output = `### Terraform Plan for ${{ matrix.directory }}
+            
+            <details><summary>Show Plan</summary>
+            
+            \`\`\`terraform
+            ${plan}
+            \`\`\`
+            </details>`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
 
       - name: Terraform apply
         if: >
