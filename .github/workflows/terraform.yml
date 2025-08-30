@@ -27,7 +27,7 @@ jobs:
       matrix:
         directory: [staging, prod]
 
-    # Run automatically on push only for staging; prod requires manual dispatch (or protected environment approval)
+    # Run automatically on push only for staging; prod requires manual dispatch (or protected environment approval).
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && github.job.matrix.directory == 'staging') ||
