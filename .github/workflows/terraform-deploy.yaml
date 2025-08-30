@@ -6,17 +6,6 @@ on:
     paths:
       - 'eu-west-1/staging/**'
       - 'eu-west-1/production/**'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'eu-west-1/staging/**'
-      - 'eu-west-1/production/**'
-  workflow_dispatch:
-    inputs:
-      apply:
-        description: 'Run terraform apply (true/false)'
-        required: false
-        default: 'false'
 
 jobs:
   terraform:
@@ -25,7 +14,6 @@ jobs:
     strategy:
       matrix:
         directory: [staging, production]
-
 
     environment: ${{ matrix.directory }}
 
@@ -37,7 +25,7 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: '1.6.0'
-          terraform_wrapper: false  # Improves output parsing
+          terraform_wrapper: false
 
       - name: Configure AWS credentials (staging)
         if: matrix.directory == 'staging'
@@ -51,8 +39,8 @@ jobs:
         if: matrix.directory == 'production'
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_production_ACCESS_KEY || secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_production_SECRET_ACCESS_KEY || secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_PRODUCTION_ACCESS_KEY || secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_PRODUCTION_SECRET_ACCESS_KEY || secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Terraform fmt
@@ -75,38 +63,11 @@ jobs:
         working-directory: ./eu-west-1/${{ matrix.directory }}
 
       - name: Upload plan artifact
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-${{ matrix.directory }}
           path: ./eu-west-1/${{ matrix.directory }}/plan.txt
 
-      - name: Comment on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            const plan = fs.readFileSync('./eu-west-1/${{ matrix.directory }}/plan.txt', 'utf8');
-            const output = `### Terraform Plan for ${{ matrix.directory }}
-            
-            <details><summary>Show Plan</summary>
-            
-            \`\`\`terraform
-            ${plan}
-            \`\`\`
-            </details>`;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            });
-
       - name: Terraform apply
-        if: >
-          (github.event_name == 'push' && matrix.directory == 'staging') ||
-          (github.event_name == 'workflow_dispatch' && github.event.inputs.apply == 'true')
         run: terraform apply -input=false -auto-approve tfplan
         working-directory: ./eu-west-1/${{ matrix.directory }}
