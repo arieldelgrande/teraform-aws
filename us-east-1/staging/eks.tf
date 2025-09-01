@@ -73,9 +73,9 @@ module "eks" {
 
       capacity_type = "SPOT"
 
-      # Enable autoscaling
-      enable_bootstrap_user_data = true
-      bootstrap_extra_args       = "--kubelet-extra-args '--node-labels=node.kubernetes.io/lifecycle=spot'"
+      labels = {
+        "node.kubernetes.io/lifecycle" = "spot"
+      }
 
       # IAM configuration for ASG access
       iam_role_additional_policies = {
