@@ -35,17 +35,17 @@ module "vpc" {
   enable_dns_hostnames = true
 
   tags = {
-    "kubernetes.io/cluster/publish-staging" = "shared"  
+    "kubernetes.io/cluster/publish-staging" = "shared"
   }
 
   public_subnet_tags = {
-    "kubernetes.io/cluster/publish-staging" = "shared"  
-    "kubernetes.io/role/elb"             = "1"
+    "kubernetes.io/cluster/publish-staging" = "shared"
+    "kubernetes.io/role/elb"                = "1"
   }
 
   private_subnet_tags = {
-    "kubernetes.io/cluster/publish-staging" = "shared"  
-    "kubernetes.io/role/internal-elb"    = "1"
+    "kubernetes.io/cluster/publish-staging" = "shared"
+    "kubernetes.io/role/internal-elb"       = "1"
   }
 }
 
@@ -53,7 +53,7 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.8"
 
-  cluster_name    = "publish-staging" 
+  cluster_name    = "publish-staging"
   cluster_version = "1.27"
 
   cluster_endpoint_public_access = true
@@ -61,35 +61,35 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  
+
   eks_managed_node_groups = {
     publish-staging = {
-      name         = "publish-staging"
+      name           = "publish-staging"
       instance_types = ["t3.medium"]
-      
+
       min_size     = 1
       max_size     = 3
       desired_size = 1
-      
-      capacity_type = "SPOT"  
-      
+
+      capacity_type = "SPOT"
+
       # Enable autoscaling
       enable_bootstrap_user_data = true
-      bootstrap_extra_args      = "--kubelet-extra-args '--node-labels=node.kubernetes.io/lifecycle=spot'"
-      
+      bootstrap_extra_args       = "--kubelet-extra-args '--node-labels=node.kubernetes.io/lifecycle=spot'"
+
       # IAM configuration for ASG access
       iam_role_additional_policies = {
         AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
         AutoScaling                  = "arn:aws:iam::aws:policy/AutoScalingFullAccess",
         ECRReadOnly                  = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
       }
-      
+
       # Spreading instances across subnets/AZs
       subnet_ids = module.vpc.private_subnets
-      
+
       tags = {
-        "k8s.io/cluster-autoscaler/enabled"     = "true"
-        "k8s.io/cluster-autoscaler/publish-staging" = "owned"  
+        "k8s.io/cluster-autoscaler/enabled"         = "true"
+        "k8s.io/cluster-autoscaler/publish-staging" = "owned"
       }
     }
   }
@@ -117,7 +117,7 @@ output "region" {
 
 output "cluster_name" {
   description = "Kubernetes Cluster Name"
-  value       = "publish-staging"  # Changed from test-cluster
+  value       = "publish-staging" # Changed from test-cluster
 }
 
 output "nodegroup_name" {
