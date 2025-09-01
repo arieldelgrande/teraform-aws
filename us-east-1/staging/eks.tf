@@ -54,7 +54,7 @@ module "eks" {
   version = "~> 20.8"
 
   cluster_name    = "publish-staging"
-  cluster_version = "1.27"
+  cluster_version = "1.30"
 
   cluster_endpoint_public_access = true
 
