@@ -4,8 +4,8 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'eu-west-1/staging/**'
-      # - 'eu-west-1/production/**
+      - 'us-east-1/staging/**'
+      # - 'us-east-1/production/**
 
 jobs:
   terraform:
@@ -45,29 +45,29 @@ jobs:
 
       - name: Terraform fmt
         run: terraform fmt -check
-        working-directory: ./eu-west-1/${{ matrix.directory }}
+        working-directory: ./us-east-1/${{ matrix.directory }}
 
       - name: Terraform init
         run: terraform init -input=false
-        working-directory: ./eu-west-1/${{ matrix.directory }}
+        working-directory: ./us-east-1/${{ matrix.directory }}
 
       - name: Terraform validate
         run: terraform validate
-        working-directory: ./eu-west-1/${{ matrix.directory }}
+        working-directory: ./us-east-1/${{ matrix.directory }}
 
       - name: Terraform plan
         id: plan
         run: |
           terraform plan -input=false -out=tfplan
           terraform show -no-color tfplan > plan.txt
-        working-directory: ./eu-west-1/${{ matrix.directory }}
+        working-directory: ./us-east-1/${{ matrix.directory }}
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-${{ matrix.directory }}
-          path: ./eu-west-1/${{ matrix.directory }}/plan.txt
+          path: ./us-east-1/${{ matrix.directory }}/plan.txt
 
       - name: Terraform apply
         run: terraform apply -input=false -auto-approve tfplan
-        working-directory: ./eu-west-1/${{ matrix.directory }}
+        working-directory: ./us-east-1/${{ matrix.directory }}
